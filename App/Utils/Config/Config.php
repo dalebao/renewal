@@ -30,11 +30,12 @@ class Config implements ClientInterface
     /**
      * Config constructor.
      * @param Container $app
+     * @param string $key
      */
-    public function __construct(Container $app)
+    public function __construct(Container $app, $key = '')
     {
         $this->app = $app;
-        $this->getInstance();
+        $this->getInstance($key);
     }
 
     /**
