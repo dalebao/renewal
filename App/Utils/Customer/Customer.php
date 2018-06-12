@@ -9,6 +9,7 @@
 namespace App\Utils\Customer;
 
 
+use App\DataCenter\DataHandler;
 use App\Interfaces\ClientInterface;
 use App\Interfaces\RabbitMQInterface;
 use Pimple\Container;
@@ -82,7 +83,7 @@ class Customer implements ClientInterface, RabbitMQInterface
         self::$amqpExchange->setName($exchange_name);
         self::$amqpExchange->setType(AMQP_EX_TYPE_DIRECT); //direct类型
         self::$amqpExchange->setFlags(AMQP_DURABLE); //持久化
-        var_dump("Exchange Status:" . self::$amqpExchange->declare() . "\n");
+//        var_dump("Exchange Status:" . self::$amqpExchange->declare() . "\n");
         return $this;
     }
 
@@ -99,7 +100,7 @@ class Customer implements ClientInterface, RabbitMQInterface
         self::$amqpQueue->setName($queue_name);
 
         self::$amqpQueue->setFlags(AMQP_DURABLE); //持久化
-        echo("Message Total:" . self::$amqpQueue->declare());
+//        echo("Message Total:" . self::$amqpQueue->declare());
         //绑定交换机与队列，并指定路由键
         return $this;
     }
@@ -125,12 +126,12 @@ class Customer implements ClientInterface, RabbitMQInterface
      */
     public function exec(String $message = '')
     {
-
-        self::$amqpQueue->consume(function ($envelope, $queue) {
+        $data_handler = new DataHandler();
+        self::$amqpQueue->consume(function ($envelope, $queue) use ($data_handler){
             $msg = $envelope->getBody();
             echo $msg . "\n"; //处理消息
-            var_dump($this->fd);
-            sleep(1);
+            $info = json_decode($msg,true);
+            $data_handler->handleData($info,$this->fd);
             $queue->ack($envelope->getDeliveryTag()); //手动发送ACK应答
         });
     }

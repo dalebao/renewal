@@ -17,6 +17,8 @@ use Pimple\Container;
  * @property \App\Utils\DB\DB $db
  * @property \App\Utils\Redis\Redis $redis
  * @property \App\Utils\Log\Log $log
+ * @property \App\Utils\Customer\Customer $customer
+ * @property \App\Utils\Producer\Producer $producer
  * @package App\Utils
  */
 class ServiceContainer extends Container
@@ -96,6 +98,8 @@ class ServiceContainer extends Container
             \App\Utils\Redis\ServiceProvider::class,
             \App\Utils\Config\ServiceProvider::class,
             \App\Utils\Log\ServiceProvider::class,
+            \App\Utils\Customer\ServiceProvider::class,
+            \App\Utils\Producer\ServiceProvider::class,
         ], $this->providers);
     }
 

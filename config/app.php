@@ -39,12 +39,19 @@ return [
         'engine' => null,
     ],
     'rabbitmq' => [
+//        'link' => [
+//            'host' => '172.19.0.4',
+//            'port' => '5672',
+//            'login' => 'guest',
+//            'password' => 'guest',
+//            'vhost' => '/'
+//        ],
         'link' => [
-            'host' => '172.19.0.4',
+            'host' => 's.71baomu.com',
             'port' => '5672',
-            'login' => 'guest',
-            'password' => 'guest',
-            'vhost' => '/'
+            'login' => 'admin',
+            'password' => 'admin',
+            'vhost' => '/renewal'
         ],
         'exchange_name' => 'e_linvo', //交换机名
         'queue_name' => 'q_linvo', //队列名

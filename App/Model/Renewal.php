@@ -10,7 +10,7 @@ namespace App\Model;
 
 
 use App\Interfaces\ModelInterface;
-use App\Lib\Producer;
+use App\Utils\ServiceContainer;
 use Carbon\Carbon;
 
 /**
@@ -33,6 +33,7 @@ class Renewal implements ModelInterface
 
     /**
      * @return mixed|void
+     * @throws \AMQPConnectionException
      */
     public function getData()
     {
@@ -44,20 +45,14 @@ class Renewal implements ModelInterface
         $this->log = app('log');
         $this->db = app('db');
         $this->redis = app('redis');
-        $config = [
-            'host' => '172.19.0.4',
-            'port' => '5672',
-            'login' => 'guest',
-            'password' => 'guest',
-            'vhost' => '/'
-        ];
-        $e_name = 'e_linvo'; //交换机名
-        $q_name = 'q_linvo'; //队列名
-        $k_route = 'key_1'; //路由key
-        $this->producer = Producer::init($config)->setExchange($e_name)->bind($k_route);
+        $container = new ServiceContainer();
+        $this->producer = $container->producer->getInstance();
 
         foreach ($this->getAccountProduct() as $data) {
-            $this->handleData($data);
+            var_dump(count($data));
+            if (!empty($data)){
+                $this->handleData($data);
+            }
         }
 
 
@@ -70,7 +65,7 @@ class Renewal implements ModelInterface
         $skip = 0;
         while ($fill_status) {
             $data = $this->db->table('account_product')
-                ->leftJoin('account', function ($join) {
+                ->rightJoin('account', function ($join) {
                     $join->on('account_product.account_key', '=', 'account.account_key');
                 })
                 ->leftJoin('company', function ($join) {
@@ -79,8 +74,9 @@ class Renewal implements ModelInterface
                 ->leftJoin('product_meal', function ($join) {
                     $join->on('product_meal.meal_key', '=', 'account_product.meal_key');
                 })
-                ->where('account_product.auto_renew', '1')
+                ->where('account_product.auto_renew', 1)
                 ->where('company.stopping', '=', 1)
+                ->where('product_meal.time_unit','=','month')
                 ->take($take)
                 ->skip($skip)
                 ->select('account_product.expire_time',
@@ -96,6 +92,7 @@ class Renewal implements ModelInterface
                     'account.pay_id6d',
                     'account.pay_account')
                 ->get();
+
             $skip += $take;
             if (count($data) < $take) {
                 $fill_status = false;
@@ -132,11 +129,11 @@ class Renewal implements ModelInterface
     {
         if (!in_array($company_id, $this->company_arr)) {
             $this->company_arr[] = $company_id;
-            $stopping = $this->db->table('company')->select('stopping')->where('company_id', $company_id)->first();
-            if ($stopping->stopping == 1) {
+//            $stopping = $this->db->table('company')->select('stopping')->where('company_id', $company_id)->first();
+//            if ($stopping->stopping == 1) {
 //            var_dump($company_id);
                 //TODO:: 让公司停机
-            }
+//            }
         }
     }
 
@@ -192,15 +189,20 @@ class Renewal implements ModelInterface
 
             $time = strtotime($a_expire_time->expire_time);
             $redis_key = 'saas.facilitator.' . $data->company_id . '.' . $data->id6d;
-            if ($data->company_id == '72001902' || $data->company_id == 72000351) {
-                app('log','war')->warn('data', ['info' => $data->id6d]);
-            }
+
             $val = $this->redis->hget($redis_key, $data->meal_key);
+            $rows['account_id'] = decrypt_6d($rows['account_id']);
+            $rows['pay_account'] = decrypt_6d($rows['pay_account']);
+
+            $mq_data = [
+                'type' => 'renewal',
+                'orders' => $rows
+            ];
             if (strtotime($this->now) >= $time && empty($val)) {
                 $this->redis->hmset($redis_key, [$data->meal_key => '1']);
                 $this->redis->expire($redis_key, 120);//120 秒过期
                 $this->log->info('data', ['info' => $data]);
-                $this->producer->exec(json_encode($rows));
+                $this->producer->exec(json_encode($mq_data));
             }
 
         }
