@@ -26,6 +26,7 @@ class Renewal implements ModelInterface
     private $stop_time;
     private $db;
     private $log;
+    private $db_log;
     private $redis;
     private $producer;
 
@@ -43,13 +44,13 @@ class Renewal implements ModelInterface
         $this->now_timestamp = Carbon::now('Asia/Shanghai')->timestamp;
         $this->stop_time = strtotime(Carbon::now('Asia/Shanghai')->format('Y-m-d 17:50:00'));
         $this->log = app('log');
+        $this->db_log = app('log','db');
         $this->db = app('db');
         $this->redis = app('redis');
         $container = new ServiceContainer();
         $this->producer = $container->producer->getInstance();
 
         foreach ($this->getAccountProduct() as $data) {
-            var_dump(count($data));
             if (!empty($data)){
                 $this->handleData($data);
             }
@@ -57,6 +58,8 @@ class Renewal implements ModelInterface
 
 
     }
+
+
 
     public function getAccountProduct()
     {
@@ -105,6 +108,7 @@ class Renewal implements ModelInterface
     public function handleData($datas)
     {
         foreach ($datas as $data) {
+            $this->db_log->info('query',['res'=>$data]);
             $company_id = $data->company_id;
             $max_expire_time = $this->db
                 ->table('account_product')
@@ -113,7 +117,7 @@ class Renewal implements ModelInterface
                 ->where('expire_time', '<', '2040-01-01')
                 ->first();
             $max_expire_time = strtotime($max_expire_time->t);
-
+//            $this->redis->expire('saas.facilitator.' . $data->company_id . '.' . $data->id6d,1);
             if ($max_expire_time == false || $max_expire_time < strtotime($this->now) - 7 * 24 * 3600) {
                 //使公司停机
                 $this->stopCompany($company_id);
@@ -128,11 +132,13 @@ class Renewal implements ModelInterface
     private function stopCompany($company_id)
     {
         if (!in_array($company_id, $this->company_arr)) {
+            $this->log->info('company_arr',['com'=>$this->company_arr]);
             $this->company_arr[] = $company_id;
 //            $stopping = $this->db->table('company')->select('stopping')->where('company_id', $company_id)->first();
 //            if ($stopping->stopping == 1) {
 //            var_dump($company_id);
                 //TODO:: 让公司停机
+            $this->db->table('company')->where('company_id',$company_id)->update(['stopping'=>'2']);
 //            }
         }
     }
@@ -201,7 +207,7 @@ class Renewal implements ModelInterface
             if (strtotime($this->now) >= $time && empty($val)) {
                 $this->redis->hmset($redis_key, [$data->meal_key => '1']);
                 $this->redis->expire($redis_key, 120);//120 秒过期
-                $this->log->info('data', ['info' => $data]);
+//                $this->log->info('data', ['info' => $data]);
                 $this->producer->exec(json_encode($mq_data));
             }
 

@@ -9,8 +9,14 @@
 require "vendor/autoload.php";
 
 
-$container = new \App\Utils\ServiceContainer([\App\Utils\Producer\ServiceProvider::class]);
-$producer = $container->producer->getInstance();
-swoole_timer_tick(200, function () use ($producer) {
-    $producer->exec(rand(1,1000000));
+$data_center = new \App\DataCenter\DataCenter();
+$data_center->setDataType('renewal');//
+swoole_timer_tick(5 * 60 * 1000, function ($a) use ($data_center) {
+    var_dump($a);
+    $data_center->test();
 });
+
+//$data_center->setDataType('refund');
+//swoole_timer_tick(4*60*60*1000, function () use ($data_center) {
+//    $data_center->test();
+//});

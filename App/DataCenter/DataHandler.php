@@ -40,6 +40,7 @@ class DataHandler
 
         $orders = $info['orders'];
         $res = curl_post($this->api, $orders);
+        $this->info_log->info('number', ['1' => 1]);
         $this->war_log->warn('result of request', ['res' => $res]);
         $this->war_log->info('time of request', ['time' => date('Y-m-d H:i:s')]);
         $this->war_log->info('details of orders', ['orders' => $orders]);
@@ -55,7 +56,7 @@ class DataHandler
     protected function setRedis($orders)
     {
         $this->redis->hmset('saas.facilitator.' . $orders['company_id'] . '.' . $orders['id6d'], [$orders['meal_key'] => 2]);
-        $this->redis->expire('saas.facilitator.' . $orders['company_id'] . '.' . $orders['id6d'], 3600);
+        $this->redis->expire('saas.facilitator.' . $orders['company_id'] . '.' . $orders['id6d'], 2 * 3600);
     }
 
 
