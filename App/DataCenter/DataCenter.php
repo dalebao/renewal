@@ -24,7 +24,7 @@ class DataCenter
     }
 
 
-    public function setDataModel()
+    private function setDataModel()
     {
         $modle = "\\App\\Model\\{$this->data_type}";
         $this->data_model = new $modle;
@@ -34,6 +34,12 @@ class DataCenter
     {
         return $this->data_model->getData();
     }
+
+    public function handleSingle($info)
+    {
+        return $this->data_model->getSingleData($info);
+    }
+
 
 
 }

@@ -16,7 +16,7 @@ $serv->set([
     'worker_num' => 3,   //工作进程数量
     'debug_mode'=> 1,
 //    'task_worker_num'=>8
-    'daemonize' => true, //是否作为守护进程
+//    'daemonize' => true, //是否作为守护进程
 ]);
 
 $serv->on('WorkerStart', function ($serv, $fd) {

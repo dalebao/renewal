@@ -20,4 +20,6 @@ interface ModelInterface
      * @return mixed
      */
     public function getData();
+
+    public function getSingleData($data);
 }

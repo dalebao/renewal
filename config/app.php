@@ -78,5 +78,9 @@ return [
         'name' => 'Redis',
         'path' => 'logs/Redis',
         'date' => true
+    ],
+
+    'action_arr' => [
+        'renewal','refund'
     ]
 ];

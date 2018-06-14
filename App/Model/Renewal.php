@@ -33,32 +33,89 @@ class Renewal implements ModelInterface
     private $company_arr = [];
 
     /**
-     * @return mixed|void
+     * Renewal constructor.
      * @throws \AMQPConnectionException
      */
-    public function getData()
+    public function __construct()
     {
+
         $this->now = Carbon::now('Asia/Shanghai')->format('Y-m-d 23:59:59');
         $this->now_d = Carbon::now('Asia/Shanghai')->format('d');
         $this->now_t = Carbon::now('Asia/Shanghai')->format('t');
         $this->now_timestamp = Carbon::now('Asia/Shanghai')->timestamp;
         $this->stop_time = strtotime(Carbon::now('Asia/Shanghai')->format('Y-m-d 17:50:00'));
         $this->log = app('log');
-        $this->db_log = app('log','db');
+        $this->db_log = app('log', 'db');
         $this->db = app('db');
         $this->redis = app('redis');
         $container = new ServiceContainer();
         $this->producer = $container->producer->getInstance();
+    }
 
+    /**
+     * @return mixed|void
+     */
+    public function getData()
+    {
         foreach ($this->getAccountProduct() as $data) {
-            if (!empty($data)){
+            if (!empty($data)) {
                 $this->handleData($data);
             }
         }
-
-
     }
 
+    public function getSingleData($info)
+    {
+
+        $data = $this->getSingleAccountProduct($info);
+        if (!empty($data)) {
+            $this->handleData($data);
+        }
+        return $data;
+    }
+
+
+
+
+    public function getSingleAccountProduct($info)
+    {
+        $company_id = $info['company_id'];
+        $meal_key = $info['meal_key'];
+
+        $query = $this->db->table('account_product')
+            ->rightJoin('account', function ($join) {
+                $join->on('account_product.account_key', '=', 'account.account_key');
+            })
+            ->leftJoin('company', function ($join) {
+                $join->on('account_product.company_id', '=', 'company.company_id');
+            })
+            ->leftJoin('product_meal', function ($join) {
+                $join->on('product_meal.meal_key', '=', 'account_product.meal_key');
+            })
+            ->where('account_product.auto_renew', 1)
+            ->where('company.stopping', '=', 1)
+            ->where('account_product.meal_key', '=', $meal_key)
+            ->where('company.company_id', '=', $company_id);
+        if (isset($info['id6d']) && !empty($info['id6d'])) {
+            $query->where('account.id6d', '=', $info['id6d']);
+        }
+
+        $data = $query->where('product_meal.time_unit', '=', 'month')
+            ->select('account_product.expire_time',
+                'account_product.product_key',
+                'product_meal.time_unit',
+                'account_product.meal_key',
+                'account_product.account_key',
+                'account_product.company_id',
+                'account_product.product_unit',
+                'account.id6d',
+                'company.facilitator_id',
+                'account.paycompany_id',
+                'account.pay_id6d',
+                'account.pay_account')
+            ->get();
+        return $data;
+    }
 
 
     public function getAccountProduct()
@@ -79,7 +136,7 @@ class Renewal implements ModelInterface
                 })
                 ->where('account_product.auto_renew', 1)
                 ->where('company.stopping', '=', 1)
-                ->where('product_meal.time_unit','=','month')
+                ->where('product_meal.time_unit', '=', 'month')
                 ->take($take)
                 ->skip($skip)
                 ->select('account_product.expire_time',
@@ -108,7 +165,7 @@ class Renewal implements ModelInterface
     public function handleData($datas)
     {
         foreach ($datas as $data) {
-            $this->db_log->info('query',['res'=>$data]);
+            $this->db_log->info('query', ['res' => $data]);
             $company_id = $data->company_id;
             $max_expire_time = $this->db
                 ->table('account_product')
@@ -117,6 +174,7 @@ class Renewal implements ModelInterface
                 ->where('expire_time', '<', '2040-01-01')
                 ->first();
             $max_expire_time = strtotime($max_expire_time->t);
+
 //            $this->redis->expire('saas.facilitator.' . $data->company_id . '.' . $data->id6d,1);
             if ($max_expire_time == false || $max_expire_time < strtotime($this->now) - 7 * 24 * 3600) {
                 //使公司停机
@@ -132,13 +190,12 @@ class Renewal implements ModelInterface
     private function stopCompany($company_id)
     {
         if (!in_array($company_id, $this->company_arr)) {
-            $this->log->info('company_arr',['com'=>$this->company_arr]);
+            $this->log->info('company_arr', ['com' => $this->company_arr]);
             $this->company_arr[] = $company_id;
 //            $stopping = $this->db->table('company')->select('stopping')->where('company_id', $company_id)->first();
 //            if ($stopping->stopping == 1) {
-//            var_dump($company_id);
-                //TODO:: 让公司停机
-            $this->db->table('company')->where('company_id',$company_id)->update(['stopping'=>'2']);
+            //TODO:: 让公司停机
+            $this->db->table('company')->where('company_id', $company_id)->update(['stopping' => '2']);
 //            }
         }
     }
