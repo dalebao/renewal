@@ -33,15 +33,15 @@ class DataHandler
                 break;
         }
 
-        //为2表示已经请求过 设置redis键过期两小时
+        //为2表示已经请求续费 设置redis键过期两小时
         if ($this->checkRedis($info['orders']) == 2) {
             return;
         }
 
         $orders = $info['orders'];
-//        $res = curl_post($this->api, $orders);
+        $res = curl_post($this->api, $orders);
         $this->info_log->info('number', ['1' => 1]);
-//        $this->war_log->warn('result of request', ['res' => $res]);
+        $this->war_log->warn('result of request', ['res' => $res]);
         $this->war_log->info('time of request', ['time' => date('Y-m-d H:i:s')]);
         $this->war_log->info('details of orders', ['orders' => $orders]);
         $this->war_log->warn('pid of this process', ['pis' => $this->pid]);

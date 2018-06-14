@@ -25,11 +25,20 @@ function handler($request)
     $action_arr = app('config')->get('action_arr');
     $data = $request->get;
 
-    if (!isset($data['action']) || empty($data['action']) || !in_array($data['action'],$action_arr)){
+    if (!isset($data['action']) || empty($data['action']) || !in_array($data['action'], $action_arr)) {
         return 'action 参数不对';
     }
+
     $data_center = new \App\DataCenter\DataCenter();
     $data_center->setDataType($data['action']);
 
-        return $data_center->handleSingle($data);
+    if (!isset($data['meal_key']) || empty($data['meal_key'])) {
+        return '缺少参数 meal_key';
+    }
+
+    if (!isset($data['company_id']) || empty($data['company_id'])) {
+        return '缺少参数 company_id';
+    }
+
+    return $data_center->handleSingle($data);
 }

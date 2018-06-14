@@ -2,23 +2,19 @@
 /**
  * Created by PhpStorm.
  * User: baoxulong
- * Date: 2018/6/4
- * Time: 上午10:49
+ * Date: 2018/6/14
+ * Time: 下午2:08
  */
 
 namespace App\Model;
 
-
+//私有云产品自动续费
 use App\Interfaces\ModelInterface;
 use App\Traits\RenewTrait;
 use App\Utils\ServiceContainer;
 use Carbon\Carbon;
 
-/**
- * Class Renewal
- * @package App\Model
- */
-class Renewal implements ModelInterface
+class Siyy implements ModelInterface
 {
     use RenewTrait;
     private $now;
@@ -86,32 +82,33 @@ class Renewal implements ModelInterface
         $company_id = $info['company_id'];
         $meal_key = $info['meal_key'];
 
-        $query = $this->db->table('account_product')
+        $query = $this->db->table('account_siyy_product')
             ->rightJoin('account', function ($join) {
-                $join->on('account_product.account_key', '=', 'account.account_key');
+                $join->on('account_siyy_product.account_key', '=', 'account.account_key');
             })
             ->leftJoin('company', function ($join) {
-                $join->on('account_product.company_id', '=', 'company.company_id');
+                $join->on('account_siyy_product.company_id', '=', 'company.company_id');
             })
             ->leftJoin('product_meal', function ($join) {
-                $join->on('product_meal.meal_key', '=', 'account_product.meal_key');
+                $join->on('product_meal.meal_key', '=', 'account_siyy_product.meal_key');
             })
-            ->where('account_product.auto_renew', 1)
+            ->where('account_siyy_product.auto_renew', 1)
             ->where('company.stopping', '=', 1)
-            ->where('account_product.meal_key', '=', $meal_key)
+            ->where('account_siyy_product.meal_key', '=', $meal_key)
             ->where('company.company_id', '=', $company_id);
         if (isset($info['id6d']) && !empty($info['id6d'])) {
             $query->where('account.id6d', '=', $info['id6d']);
         }
 
         $data = $query->where('product_meal.time_unit', '=', 'month')
-            ->select('account_product.expire_time',
-                'account_product.product_key',
+            ->select('account_siyy_product.expire_time',
+                'account_siyy_product.siyy_product_id',
+                'account_siyy_product.product_key',
                 'product_meal.time_unit',
-                'account_product.meal_key',
-                'account_product.account_key',
-                'account_product.company_id',
-                'account_product.product_unit',
+                'account_siyy_product.meal_key',
+                'account_siyy_product.account_key',
+                'account_siyy_product.company_id',
+                'account_siyy_product.product_unit',
                 'account.id6d',
                 'company.facilitator_id',
                 'account.paycompany_id',
@@ -128,28 +125,29 @@ class Renewal implements ModelInterface
         $take = 1000;
         $skip = 0;
         while ($fill_status) {
-            $data = $this->db->table('account_product')
+            $data = $this->db->table('account_siyy_product')
                 ->rightJoin('account', function ($join) {
-                    $join->on('account_product.account_key', '=', 'account.account_key');
+                    $join->on('account_siyy_product.account_key', '=', 'account.account_key');
                 })
                 ->leftJoin('company', function ($join) {
-                    $join->on('account_product.company_id', '=', 'company.company_id');
+                    $join->on('account_siyy_product.company_id', '=', 'company.company_id');
                 })
                 ->leftJoin('product_meal', function ($join) {
-                    $join->on('product_meal.meal_key', '=', 'account_product.meal_key');
+                    $join->on('product_meal.meal_key', '=', 'account_siyy_product.meal_key');
                 })
-                ->where('account_product.auto_renew', 1)
+                ->where('account_siyy_product.auto_renew', 1)
                 ->where('company.stopping', '=', 1)
                 ->where('product_meal.time_unit', '=', 'month')
                 ->take($take)
                 ->skip($skip)
-                ->select('account_product.expire_time',
-                    'account_product.product_key',
+                ->select('account_siyy_product.expire_time',
+                    'account_siyy_product.siyy_product_id',
+                    'account_siyy_product.product_key',
                     'product_meal.time_unit',
-                    'account_product.meal_key',
-                    'account_product.account_key',
-                    'account_product.company_id',
-                    'account_product.product_unit',
+                    'account_siyy_product.meal_key',
+                    'account_siyy_product.account_key',
+                    'account_siyy_product.company_id',
+                    'account_siyy_product.product_unit',
                     'account.id6d',
                     'company.facilitator_id',
                     'account.paycompany_id',
@@ -170,23 +168,10 @@ class Renewal implements ModelInterface
     {
         foreach ($datas as $data) {
             $this->db_log->info('query', ['res' => $data]);
-            $company_id = $data->company_id;
-            $max_expire_time = $this->db
-                ->table('account_product')
-                ->selectRaw('max(expire_time) as t')
-                ->where('company_id', '=', $company_id)
-                ->where('expire_time', '<', '2040-01-01')
-                ->first();
-            $max_expire_time = strtotime($max_expire_time->t);
-
 //            $this->redis->expire('saas.facilitator.' . $data->company_id . '.' . $data->id6d,1);
-            if ($max_expire_time == false || $max_expire_time < strtotime($this->now) - 7 * 24 * 3600) {
-                //使公司停机
-                $this->stopCompany($company_id);
-            } else {
-                //处理订单数据
-                $this->handleOrder($data);
-            }
+
+            //处理订单数据
+            $this->handleOrder($data);
         }
 
     }
@@ -232,10 +217,12 @@ class Renewal implements ModelInterface
                 'paycompany_id' => $data->paycompany_id,    //代支付公司ID
                 'product_unit' => $data->product_unit,        //单位
                 'order_amount' => $order_amount,            //产品数量
+                'yun_type' => 1,                            //云类型（0:公有云,1:私有云）
+                'siyy_product_id' => $data->siyy_product_id,//私有云产品唯一ID
                 'cmd' => 'renew_order',
                 '53kf_token' => 'Aj|uU620cjJ`53kf'];
 
-            $a_expire_time = $this->db->table('account_product')->where('account_key', $data->account_key)
+            $a_expire_time = $this->db->table('account_siyy_product')->where('account_key', $data->account_key)
                 ->where('company_id', $data->company_id)
                 ->where('meal_key', $data->meal_key)
                 ->where('product_key', $data->product_key)
@@ -244,11 +231,10 @@ class Renewal implements ModelInterface
 
             $time = strtotime($a_expire_time->expire_time);
 
-            $this->sendMsgAndSetLock($rows, $data,$time);
+            $this->sendMsgAndSetLock($rows, $data, $time);
 
 
         }
     }
-
 
 }
