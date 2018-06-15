@@ -31,7 +31,7 @@ trait RenewTrait
     {
 
 
-        $redis_key = 'saas.facilitator.' . $data->company_id . '.' . $data->id6d;
+        $redis_key = 'saas.facilitator.renewal.' . $data->company_id . '.' . $data->id6d;
 
         $val = $this->redis->hget($redis_key, $data->meal_key);
         $rows['account_id'] = decrypt_6d($rows['account_id']);

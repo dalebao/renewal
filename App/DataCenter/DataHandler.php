@@ -12,6 +12,7 @@ namespace App\DataCenter;
 class DataHandler
 {
     private $api;
+    private $type;
     private $redis;
     private $war_log;
     private $info_log;
@@ -30,7 +31,11 @@ class DataHandler
         switch ($info['type']) {
             case 'renewal':
                 $this->api = 'http://api.saas.71baomu.com/order?cmd=renew_order';
+                $this->type = 'renewal';
                 break;
+            case 'refund':
+                $this->api = 'http://api.saas.71baomu.com/order';
+                $this->type = 'refund';
         }
 
         //为2表示已经请求续费 设置redis键过期两小时
@@ -50,13 +55,13 @@ class DataHandler
 
     protected function checkRedis($orders)
     {
-        return $this->redis->hget('saas.facilitator.' . $orders['company_id'] . '.' . $orders['id6d'], $orders['meal_key']);
+        return $this->redis->hget('saas.facilitator.' . $this->type . '.' . $orders['company_id'] . '.' . $orders['id6d'], $orders['meal_key']);
     }
 
     protected function setRedis($orders)
     {
-        $this->redis->hmset('saas.facilitator.' . $orders['company_id'] . '.' . $orders['id6d'], [$orders['meal_key'] => 2]);
-        $this->redis->expire('saas.facilitator.' . $orders['company_id'] . '.' . $orders['id6d'], 2 * 3600);
+        $this->redis->hmset('saas.facilitator.' . $this->type . '.' . $orders['company_id'] . '.' . $orders['id6d'], [$orders['meal_key'] => 2]);
+        $this->redis->expire('saas.facilitator.' . $this->type . '.' . $orders['company_id'] . '.' . $orders['id6d'], 2 * 3600);
     }
 
 
