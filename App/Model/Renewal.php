@@ -244,7 +244,7 @@ class Renewal implements ModelInterface
 
             $time = strtotime($a_expire_time->expire_time);
 
-            $this->sendMsgAndSetLock($rows, $data,$time);
+            $this->sendMsgAndSetLock($rows, $data, $time);
 
 
         }

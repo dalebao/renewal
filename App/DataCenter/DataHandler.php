@@ -20,6 +20,7 @@ class DataHandler
 
     public function __construct()
     {
+        $this->api = 'http://api.saas.71baomu.com/order?cmd=renew_order';
         $this->redis = app('redis');
         $this->war_log = app('log', 'war');
         $this->info_log = app('log', 'info');
@@ -30,11 +31,9 @@ class DataHandler
         $this->pid = $pid;
         switch ($info['type']) {
             case 'renewal':
-                $this->api = 'http://api.saas.71baomu.com/order?cmd=renew_order';
                 $this->type = 'renewal';
                 break;
             case 'refund':
-                $this->api = 'http://api.saas.71baomu.com/order';
                 $this->type = 'refund';
         }
 
