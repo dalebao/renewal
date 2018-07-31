@@ -27,8 +27,6 @@ class Renewal implements ModelInterface
     private $now_timestamp;
     private $stop_time;
     private $db;
-    private $log;
-    private $db_log;
     private $redis;
     private $producer;
 
@@ -45,8 +43,6 @@ class Renewal implements ModelInterface
         $this->now_t = Carbon::now('Asia/Shanghai')->format('t');
         $this->now_timestamp = Carbon::now('Asia/Shanghai')->timestamp;
         $this->stop_time = strtotime(Carbon::now('Asia/Shanghai')->format('Y-m-d 17:50:00'));
-        $this->log = app('log');
-        $this->db_log = app('log', 'db');
         $this->db = app('db');
         $this->redis = app('redis');
         $container = new ServiceContainer();
@@ -169,7 +165,6 @@ class Renewal implements ModelInterface
     public function handleData($datas)
     {
         foreach ($datas as $data) {
-            $this->db_log->info('query', ['res' => $data]);
             $company_id = $data->company_id;
             $max_expire_time = $this->db
                 ->table('account_product')
@@ -179,7 +174,6 @@ class Renewal implements ModelInterface
                 ->first();
             $max_expire_time = strtotime($max_expire_time->t);
 
-//            $this->redis->expire('saas.facilitator.' . $data->company_id . '.' . $data->id6d,1);
             if ($max_expire_time == false || $max_expire_time < strtotime($this->now) - 7 * 24 * 3600) {
                 //使公司停机
                 $this->stopCompany($company_id);
@@ -194,6 +188,9 @@ class Renewal implements ModelInterface
 
     public function handleOrder($data)
     {
+        app('log')->info('数据类型',['type'=>'自动续费']);
+        app('log')->info('sql-筛选出的数据',['data'=>$data]);
+
         $expire_time = strtotime($data->expire_time);
         //产品单位是月 就走自动续费
         if ($data->time_unit == 'month') {
@@ -234,7 +231,7 @@ class Renewal implements ModelInterface
                 'order_amount' => $order_amount,            //产品数量
                 'cmd' => 'renew_order',
                 '53kf_token' => 'Aj|uU620cjJ`53kf'];
-
+            app('log')->info('拼装之后的数据',['order'=>$rows]);
             $a_expire_time = $this->db->table('account_product')->where('account_key', $data->account_key)
                 ->where('company_id', $data->company_id)
                 ->where('meal_key', $data->meal_key)

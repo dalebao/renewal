@@ -221,7 +221,9 @@ class Siyy implements ModelInterface
                 'siyy_product_id' => $data->siyy_product_id,//私有云产品唯一ID
                 'cmd' => 'renew_order',
                 '53kf_token' => 'Aj|uU620cjJ`53kf'];
-
+            app('log')->info('数据类型',['type'=>'siyy']);
+            app('log')->info('sql-筛选出的数据',['data'=>$data]);
+            app('log')->info('拼装之后的数据',['order'=>$rows]);
             $a_expire_time = $this->db->table('account_siyy_product')->where('account_key', $data->account_key)
                 ->where('company_id', $data->company_id)
                 ->where('meal_key', $data->meal_key)

@@ -48,6 +48,7 @@ class Producer implements ClientInterface, RabbitMQInterface
             $link = $config['link'];
             $exchange_name = $config['exchange_name'];
             $route_key = $config['route_key'];
+
             self::$producer[$key] = self::init($link)->setExchange($exchange_name)->bind($route_key);
         }
         return self::$producer[$key];

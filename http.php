@@ -33,11 +33,11 @@ function handler($request)
     $data_center->setDataType($data['action']);
 
     if (!isset($data['meal_key']) || empty($data['meal_key'])) {
-        return '缺少参数 meal_key';
+        return 'lack of params: meal_key';
     }
 
     if (!isset($data['company_id']) || empty($data['company_id'])) {
-        return '缺少参数 company_id';
+        return 'lack of params: company_id';
     }
 
     return $data_center->handleSingle($data);

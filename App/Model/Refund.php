@@ -40,6 +40,7 @@ class Refund implements ModelInterface
         $this->end_time = Carbon::today('Asia/Shanghai')->format('Y-m-d 00:00:00');
         $this->expire_time = Carbon::now('Asia/Shanghai')->lastOfMonth()->format('Y-m-d 23:59:59');
 
+
         $this->log = app('log');
         $this->db_log = app('log', 'db');
         $this->db = app('db');
@@ -52,9 +53,9 @@ class Refund implements ModelInterface
     public function getData()
     {
         // TODO: Implement getData() method.
-//        if ($this->today == $this->first_day) {
-        $data = $this->getAllData();
-//        }
+        if ($this->today == $this->first_day) {
+            $data = $this->getAllData();
+        }
 
         if (!empty($data)) {
             foreach ($data as $datum) {
@@ -62,16 +63,21 @@ class Refund implements ModelInterface
             }
         }
 
-        var_dump($data);
     }
 
     /**
      * @param $data
      * @return mixed
      */
-    public function getSingleData($data)
+    public function getSingleData($info)
     {
+        $data = $this->getSingleAccountProduct($info);
 
+        if (!empty($data)) {
+            $this->handleData($data);
+        }
+
+        return $data;
     }
 
 
@@ -84,8 +90,8 @@ class Refund implements ModelInterface
             ->leftJoin('order', function ($join) {
                 $join->on('account.account_key', '=', 'order.account_key');
             })
-            ->leftJoin('company',function ($join){
-                $join->on('company.company_id','=','switch_renew_log.company_id');
+            ->leftJoin('company', function ($join) {
+                $join->on('company.company_id', '=', 'switch_renew_log.company_id');
             })
             ->where('switch_renew_log.auto_renew', '=', 0)
             ->where('switch_renew_log.remarks', '=', '手动修改续费开关')
@@ -103,6 +109,47 @@ class Refund implements ModelInterface
                 'order.paycompany_id',
                 'order.order_amount')
             ->get();
+    }
+
+    protected function getSingleAccountProduct($data)
+    {
+        $meal_key = $data['meal_key'];
+        $id6d = $data['id6d'];
+
+
+        $query = $this->db->table('switch_renew_log')
+            ->leftJoin('account', function ($join) {
+                $join->on('switch_renew_log.id6d', '=', 'account.id6d');
+            })
+            ->leftJoin('order', function ($join) {
+                $join->on('account.account_key', '=', 'order.account_key');
+            })
+            ->leftJoin('company', function ($join) {
+                $join->on('company.company_id', '=', 'switch_renew_log.company_id');
+            });
+        if (isset($id6d) && !empty($id6d)) {
+            $query->where('account.id6d', $id6d);
+        }
+        if (isset($meal_key) && !empty($meal_key)) {
+            $query->where('account.id6d', $meal_key);
+        }
+
+        return $query->where('switch_renew_log.auto_renew', '=', 0)
+            ->where('switch_renew_log.remarks', '=', '手动修改续费开关')
+            ->whereBetween('switch_renew_log.alter_time', [$this->start_time, $this->end_time])
+            ->whereBetween('order.order_time', [$this->start_time, $this->end_time])
+            ->where('order.now_expire_time', '=', $this->expire_time)
+            ->select('account.id6d',
+                'company.facilitator_id',
+                'order.order_key',
+                'order.product_key',
+                'order.meal_key',
+                'order.account_key',
+                'order.company_id',
+                'order.pay_account',
+                'order.paycompany_id',
+                'order.order_amount')
+            ->first();
     }
 
     protected function handleData($data)
@@ -125,6 +172,9 @@ class Refund implements ModelInterface
             'refund_type' => 'all',
             'order_remarks' => '月末修改自动续费开关的退款', //订单备注
             '53kf_token' => 'Aj|uU620cjJ`53kf'];
+        app('log')->info('数据类型', ['type' => 'refund']);
+        app('log')->info('sql-筛选出的数据', ['data' => $data]);
+        app('log')->info('拼装之后的数据', ['order' => $order]);
 
         $order['account_id'] = decrypt_6d($order['account_id']);
         $order['pay_account'] = decrypt_6d($order['pay_account']);

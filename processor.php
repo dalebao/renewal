@@ -13,8 +13,9 @@ $serv = new swoole_server('127.0.0.1', 9501);
 
 
 $serv->set([
-    'worker_num' => 3,   //工作进程数量
-    'debug_mode'=> 1,
+    'worker_num' => 2,   //工作进程数量
+    'debug_mode' => 1,
+    'log_file' => '/tmp/swoole/processor.log',
 //    'task_worker_num'=>8
 //    'daemonize' => true, //是否作为守护进程
 ]);
@@ -23,7 +24,6 @@ $serv->on('WorkerStart', function ($serv, $fd) {
     try {
         $container = new \App\Utils\ServiceContainer([\App\Utils\Customer\ServiceProvider::class]);
         $customer = $container->customer->getInstance()->setPid($fd);
-        var_dump(date('Ymd H:i:s', time()));
         while (True) {
             $customer->exec();
         }

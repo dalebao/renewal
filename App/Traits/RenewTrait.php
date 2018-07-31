@@ -16,7 +16,7 @@ trait RenewTrait
     private function stopCompany($company_id)
     {
         if (!in_array($company_id, $this->company_arr)) {
-            $this->log->info('company_arr', ['com' => $this->company_arr]);
+            app('log')->info('停机公司id', ['com' => $company_id]);
             $this->company_arr[] = $company_id;
 //            $stopping = $this->db->table('company')->select('stopping')->where('company_id', $company_id)->first();
 //            if ($stopping->stopping == 1) {
@@ -29,8 +29,8 @@ trait RenewTrait
 
     private function sendMsgAndSetLock($rows, $data, $time)
     {
-
-
+        app('log')->info('未处理的数据', ['data' => $data]);
+        app('log')->info('处理之后的数据', ['rows' => $rows]);
         $redis_key = 'saas.facilitator.renewal.' . $data->company_id . '.' . $data->id6d;
 
         $val = $this->redis->hget($redis_key, $data->meal_key);
@@ -41,12 +41,13 @@ trait RenewTrait
             'type' => 'renewal',
             'orders' => $rows
         ];
+        app('log')->info('写入rabbitMq的数据', ['mq_data' => $mq_data]);
         if (strtotime($this->now) >= $time && empty($val)) {
-            $this->redis->hmset($redis_key, [$data->meal_key => '1']);
-            $this->redis->expire($redis_key, 120);//120 秒过期
-//                $this->log->info('data', ['info' => $data]);
-            $this->producer->exec(json_encode($mq_data));
-        }
+        $this->redis->hmset($redis_key, [$data->meal_key => '1']);
+        $this->redis->expire($redis_key, 120);//120 秒过期
+        app('log')->info('data', ['info' => $data]);
+        $this->producer->exec(json_encode($mq_data));
+    }
 
     }
 

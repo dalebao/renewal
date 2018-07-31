@@ -79,8 +79,15 @@ return [
         'path' => 'logs/Redis',
         'date' => true
     ],
+    'runtime_log' => [
+        'name' => 'Runtime',
+        'path' => 'logs/Runtime',
+        'date' => true
+    ],
 
     'action_arr' => [
         'renewal','refund'
-    ]
+    ],
+    'api'=>'http://api.saas.71baomu.com/order?cmd=renew_order'
+
 ];

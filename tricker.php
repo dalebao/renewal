@@ -24,11 +24,12 @@ require "vendor/autoload.php";
 
 $serv = new swoole_server('127.0.0.1', 9601, SWOOLE_BASE, SWOOLE_SOCK_TCP);
 $serv->set([
-//    'daemonize' => true,
-    'worker_num'=>1
+    'daemonize' => true,
+    'log_file' => '/tmp/swoole/trick.php',
+    'worker_num' => 1
 ]);
 
-$serv->on('WorkerStart','workStart');
+$serv->on('WorkerStart', 'workStart');
 
 $serv->on('Receive', function ($serv, $fd, $fromId, $data) {
     // 收到数据后发送给客户端
@@ -46,17 +47,27 @@ $serv->on('Close', function ($serv, $fd) {
 
 $serv->start();
 
-function workStart($serv,$fd)
+function workStart($serv, $fd)
 {
     $datacenter = new \App\DataCenter\DataCenter();
-    $datacenter->setDataType('renewal');
     //自动续费
-    $serv->tick(10000, function ($id) use($datacenter){
-//        $datacenter->test();
-        var_dump(222,$id);
+    $serv->tick(4 * 3600 * 1000, function ($id) use ($datacenter) {
+        $datacenter->setDataType('renewal');
+        $datacenter->action();
+        app('log')->info('renewal', ['info' => $id, 'type' => 'renewal']);
     });
 
-    $serv->tick(1000,function (){
-        var_dump(1);
+    //私有云产品自动续费
+    $serv->tick(4 * 3600 * 1000, function ($id) use ($datacenter) {
+        $datacenter->setDataType('siyy');
+        $datacenter->action();
+        app('log')->info('siyy', ['info' => $id, 'type' => 'renewal']);
     });
+
+    //自动退费
+//    $serv->tick(4 * 3600 * 1000, function ($id) use ($datacenter) {
+//        $datacenter->setDataType('refund');
+//        $datacenter->action();
+//        app('log')->info('refund', ['info' => $id, 'type' => 'renewal']);
+//    });
 }
